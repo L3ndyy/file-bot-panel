@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>File Bot Web Panel</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com "></script>
+  <script src="https://unpkg.com/react @18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom @18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/ @babel/standalone/babel.min.js"></script>
   <style>
     body {
       background-color: #f5f7fa;
@@ -34,9 +34,9 @@
 </head>
 <body>
   <div id="root"></div>
+
   <script type="text/babel">
     const { useState, useEffect } = React;
-
     const App = () => {
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [isAdmin, setIsAdmin] = useState(false);
@@ -55,20 +55,20 @@
       const [selectedUser, setSelectedUser] = useState('');
 
       useEffect(() => {
-        fetch('/.netlify/functions/api/files')
+        fetch('/api/files')
           .then(res => res.json())
           .then(data => setFiles(data));
-        fetch('/.netlify/functions/api/access')
+        fetch('/api/access')
           .then(res => res.json())
           .then(data => setAccessRequests(data));
-        fetch('/.netlify/functions/api/users')
+        fetch('/api/users')
           .then(res => res.json())
           .then(data => setUsers(data));
       }, []);
 
       const handleLogin = (e) => {
         e.preventDefault();
-        fetch('/.netlify/functions/api/login', {
+        fetch('/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password }),
@@ -93,7 +93,7 @@
           setMessage('Только админ может загружать файлы. Укажите категорию и название.');
           return;
         }
-        fetch('/.netlify/functions/api/upload', {
+        fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: fileName, category: selectedCategory }),
@@ -114,7 +114,7 @@
 
       const handleApproveAccess = (userId) => {
         if (!isAdmin) return;
-        fetch(`/..netlify/functions/api/access/${userId}`, {
+        fetch(`/api/access/${userId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'approve' }),
@@ -129,7 +129,7 @@
 
       const handleRevokeAccess = (userId) => {
         if (!isAdmin) return;
-        fetch(`/..netlify/functions/api/access/${userId}`, {
+        fetch(`/api/access/${userId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'revoke' }),
@@ -158,7 +158,7 @@
           setMessage('Только L3ndy может добавлять пользователей.');
           return;
         }
-        fetch('/.netlify/functions/api/users', {
+        fetch('/api/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: newUser.username, password: newUser.password, currentUser }),
@@ -182,7 +182,7 @@
           setMessage('Только L3ndy может редактировать пользователей.');
           return;
         }
-        fetch(`/..netlify/functions/api/users/${editUser.username}`, {
+        fetch(`/api/users/${editUser.username}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -211,7 +211,7 @@
           return;
         }
         const action = e.target.name === 'grant' ? 'grant' : 'revoke';
-        fetch(`/..netlify/functions/api/admin/${selectedUser}`, {
+        fetch(`/api/admin/${selectedUser}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action, currentUser }),
@@ -261,9 +261,7 @@
             <h1 className="text-3xl font-semibold text-gray-800">Панель управления</h1>
             <button onClick={handleLogout} className="btn btn-danger">Выход</button>
           </div>
-
           {message && <div className="text-center text-green-600 mb-4">{message}</div>}
-
           {isAdmin && currentUser === 'L3ndy' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="card p-4">
@@ -286,7 +284,6 @@
                   <button type="submit" className="btn btn-success w-full">Добавить</button>
                 </form>
               </div>
-
               <div className="card p-4">
                 <h2 className="text-xl font-medium mb-3">Редактировать пользователя</h2>
                 <form onSubmit={handleEditUser} className="space-y-3">
@@ -317,7 +314,6 @@
                   <button type="submit" className="btn btn-warning w-full">Сохранить</button>
                 </form>
               </div>
-
               <div className="card p-4">
                 <h2 className="text-xl font-medium mb-3">Управление админ-правами</h2>
                 <form className="space-y-3">
@@ -339,7 +335,6 @@
               </div>
             </div>
           )}
-
           {isAdmin && (
             <div className="card p-4 mb-6">
               <h2 className="text-xl font-medium mb-3">Загрузить файл</h2>
@@ -365,7 +360,6 @@
               </form>
             </div>
           )}
-
           <div className="card p-4 mb-6">
             <h2 className="text-xl font-medium mb-3">Файлы</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -377,7 +371,6 @@
               ))}
             </div>
           </div>
-
           {isAdmin && (
             <div className="card p-4">
               <h2 className="text-xl font-medium mb-3">Управление доступом</h2>
@@ -402,7 +395,6 @@
         </div>
       );
     };
-
     ReactDOM.render(<App />, document.getElementById('root'));
   </script>
 </body>
