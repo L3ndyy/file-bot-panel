@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>File Bot Web Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body {
+      background-color: #f5f7fa;
+      font-family: 'Inter', sans-serif;
+      color: #2d3748;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+    }
+    .btn {
+      @apply px-4 py-2 rounded-lg transition duration-200;
+    }
+    .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
+    .btn-success { @apply bg-green-600 text-white hover:bg-green-700; }
+    .btn-warning { @apply bg-yellow-600 text-white hover:bg-yellow-700; }
+    .btn-danger { @apply bg-red-600 text-white hover:bg-red-700; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const App = () => {
+      const [isLoggedIn, setIsLoggedIn] = useState(false);
+      const [isAdmin, setIsAdmin] = useState(false);
+      const [username, setUsername] = useState('');
+      const [password, setPassword] = useState('');
+      const [files, setFiles] = useState([]);
+      const [categories] = useState(['Ляйсан', 'Власов', 'Инсайды консилиума']);
+      const [selectedCategory, setSelectedCategory] = useState('');
+      const [fileName, setFileName] = useState('');
+      const [accessRequests, setAccessRequests] = useState([]);
+      const [users, setUsers] = useState([]);
+      const [message, setMessage] = useState('');
+      const [newUser, setNewUser] = useState({ username: '', password: '' });
+      const [editUser, setEditUser] = useState({ username: '', newUsername: '', newPassword: '' });
+      const [currentUser, setCurrentUser] = useState('');
+      const [selectedUser, setSelectedUser] = useState('');
+
+      useEffect(() => {
+        fetch('/.netlify/functions/api/files')
+          .then(res => res.json())
+          .then(data => setFiles(data));
+        fetch('/.netlify/functions/api/access')
+          .then(res => res.json())
+          .then(data => setAccessRequests(data));
+        fetch('/.netlify/functions/api/users')
+          .then(res => res.json())
+          .then(data => setUsers(data));
+      }, []);
+
+      const handleLogin = (e) => {
+        e.preventDefault();
+        fetch('/.netlify/functions/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setIsLoggedIn(true);
+              setIsAdmin(data.isAdmin);
+              setCurrentUser(data.username);
+              setMessage(`Вы вошли как ${data.isAdmin ? 'администратор' : 'пользователь'}!`);
+            } else {
+              setMessage(data.message);
+            }
+            setTimeout(() => setMessage(''), 3000);
+          });
+      };
+
+      const handleFileUpload = (e) => {
+        e.preventDefault();
+        if (!isAdmin || !selectedCategory || !fileName) {
+          setMessage('Только админ может загружать файлы. Укажите категорию и название.');
+          return;
+        }
+        fetch('/.netlify/functions/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: fileName, category: selectedCategory }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setFiles([...files, { id: files.length + 1, name: fileName, category: selectedCategory }]);
+              setFileName('');
+              setSelectedCategory('');
+              setMessage(data.message);
+            } else {
+              setMessage(data.message);
+            }
+            setTimeout(() => setMessage(''), 3000);
+          });
+      };
+
+      const handleApproveAccess = (userId) => {
+        if (!isAdmin) return;
+        fetch(`/..netlify/functions/api/access/${userId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve' }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            setAccessRequests(accessRequests.map(req => req.userId === userId ? { ...req, status: 'approved' } : req));
+            setMessage(data.message);
+            setTimeout(() => setMessage(''), 3000);
+          });
+      };
+
+      const handleRevokeAccess = (userId) => {
+        if (!isAdmin) return;
+        fetch(`/..netlify/functions/api/access/${userId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'revoke' }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            setAccessRequests(accessRequests.map(req => req.userId === userId ? { ...req, status: 'revoked' } : req));
+            setMessage(data.message);
+            setTimeout(() => setMessage(''), 3000);
+          });
+      };
+
+      const handleLogout = () => {
+        setIsLoggedIn(false);
+        setIsAdmin(false);
+        setUsername('');
+        setPassword('');
+        setCurrentUser('');
+        setMessage('Вы вышли из системы!');
+        setTimeout(() => setMessage(''), 3000);
+      };
+
+      const handleAddUser = (e) => {
+        e.preventDefault();
+        if (!isAdmin || currentUser !== 'L3ndy') {
+          setMessage('Только L3ndy может добавлять пользователей.');
+          return;
+        }
+        fetch('/.netlify/functions/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: newUser.username, password: newUser.password, currentUser }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setUsers([...users, { id: users.length + 1, username: newUser.username }]);
+              setNewUser({ username: '', password: '' });
+              setMessage(data.message);
+            } else {
+              setMessage(data.message);
+            }
+            setTimeout(() => setMessage(''), 3000);
+          });
+      };
+
+      const handleEditUser = (e) => {
+        e.preventDefault();
+        if (!isAdmin || currentUser !== 'L3ndy') {
+          setMessage('Только L3ndy может редактировать пользователей.');
+          return;
+        }
+        fetch(`/..netlify/functions/api/users/${editUser.username}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            newUsername: editUser.newUsername,
+            newPassword: editUser.newPassword,
+            currentUser,
+          }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setUsers(users.map(u => u.username === editUser.username ? { ...u, username: editUser.newUsername || u.username } : u));
+              setEditUser({ username: '', newUsername: '', newPassword: '' });
+              setMessage(data.message);
+            } else {
+              setMessage(data.message);
+            }
+            setTimeout(() => setMessage(''), 3000);
+          });
+      };
+
+      const handleManageAdmin = (e) => {
+        e.preventDefault();
+        if (!isAdmin || currentUser !== 'L3ndy') {
+          setMessage('Только L3ndy может управлять админскими правами.');
+          return;
+        }
+        const action = e.target.name === 'grant' ? 'grant' : 'revoke';
+        fetch(`/..netlify/functions/api/admin/${selectedUser}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, currentUser }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setMessage(data.message);
+            } else {
+              setMessage(data.message);
+            }
+            setTimeout(() => setMessage(''), 3000);
+          });
+      };
+
+      if (!isLoggedIn) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-gray-100">
+            <div className="card p-6 w-full max-w-sm">
+              <h1 className="text-2xl font-bold text-center mb-4">Вход</h1>
+              {message && <div className="text-center text-red-600 mb-4">{message}</div>}
+              <form onSubmit={handleLogin} className="space-y-4">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Логин"
+                  className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Пароль"
+                  className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button type="submit" className="btn btn-primary w-full">Войти</button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="p-4 max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-semibold text-gray-800">Панель управления</h1>
+            <button onClick={handleLogout} className="btn btn-danger">Выход</button>
+          </div>
+
+          {message && <div className="text-center text-green-600 mb-4">{message}</div>}
+
+          {isAdmin && currentUser === 'L3ndy' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="card p-4">
+                <h2 className="text-xl font-medium mb-3">Добавить пользователя</h2>
+                <form onSubmit={handleAddUser} className="space-y-3">
+                  <input
+                    type="text"
+                    value={newUser.username}
+                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                    placeholder="Логин"
+                    className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    placeholder="Пароль"
+                    className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button type="submit" className="btn btn-success w-full">Добавить</button>
+                </form>
+              </div>
+
+              <div className="card p-4">
+                <h2 className="text-xl font-medium mb-3">Редактировать пользователя</h2>
+                <form onSubmit={handleEditUser} className="space-y-3">
+                  <select
+                    value={editUser.username}
+                    onChange={(e) => setEditUser({ ...editUser, username: e.target.value })}
+                    className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Выберите пользователя</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.username}>{user.username}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={editUser.newUsername}
+                    onChange={(e) => setEditUser({ ...editUser, newUsername: e.target.value })}
+                    placeholder="Новый логин"
+                    className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="password"
+                    value={editUser.newPassword}
+                    onChange={(e) => setEditUser({ ...editUser, newPassword: e.target.value })}
+                    placeholder="Новый пароль"
+                    className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button type="submit" className="btn btn-warning w-full">Сохранить</button>
+                </form>
+              </div>
+
+              <div className="card p-4">
+                <h2 className="text-xl font-medium mb-3">Управление админ-правами</h2>
+                <form className="space-y-3">
+                  <select
+                    value={selectedUser}
+                    onChange={(e) => setSelectedUser(e.target.value)}
+                    className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Выберите пользователя</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.username}>{user.username}</option>
+                    ))}
+                  </select>
+                  <div className="flex space-x-2">
+                    <button name="grant" onClick={handleManageAdmin} className="btn btn-success flex-1">Выдать админку</button>
+                    <button name="revoke" onClick={handleManageAdmin} className="btn btn-danger flex-1">Отозвать админку</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="card p-4 mb-6">
+              <h2 className="text-xl font-medium mb-3">Загрузить файл</h2>
+              <form onSubmit={handleFileUpload} className="space-y-3">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Категория</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={fileName}
+                  onChange={(e) => setFileName(e.target.value)}
+                  placeholder="Название файла"
+                  className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button type="submit" className="btn btn-primary w-full">Загрузить</button>
+              </form>
+            </div>
+          )}
+
+          <div className="card p-4 mb-6">
+            <h2 className="text-xl font-medium mb-3">Файлы</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {files.map((file) => (
+                <div key={file.id} className="p-3 border rounded-lg bg-gray-50 hover:bg-gray-100">
+                  <p className="text-md font-medium">{file.name}</p>
+                  <p className="text-sm text-gray-600">{file.category}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div className="card p-4">
+              <h2 className="text-xl font-medium mb-3">Управление доступом</h2>
+              <div className="space-y-3">
+                {accessRequests.map((req) => {
+                  const user = users.find(u => u.id === req.userId);
+                  return (
+                    <div key={req.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                      <span className="text-gray-700">{user ? user.username : `ID ${req.userId}`} - {req.status}</span>
+                      {req.status === 'pending' && (
+                        <button onClick={() => handleApproveAccess(req.userId)} className="btn btn-success px-2 py-1">Одобрить</button>
+                      )}
+                      {req.status === 'approved' && (
+                        <button onClick={() => handleRevokeAccess(req.userId)} className="btn btn-danger px-2 py-1">Отозвать</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
