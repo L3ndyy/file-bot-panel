@@ -3,18 +3,21 @@
   "version": "1.0.0",
   "description": "Web-приложение для управления файлами и пользователями с админ-панелью.",
   "main": "index.js",
+  "engines": {
+    "node": "18.20.5"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/L3ndyy/file-bot-panel.git"
+    "url": "git+https://github.com/L3ndyy/file-bot-panel.git "
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/L3ndyy/file-bot-panel/issues"
+    "url": "https://github.com/L3ndyy/file-bot-panel/issues "
   },
   "homepage": "https://github.com/L3ndyy/file-bot-panel#readme",
   "dependencies": {
